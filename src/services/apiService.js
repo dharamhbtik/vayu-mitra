@@ -8,8 +8,8 @@
 // Configuration
 // ============================================================================
 
-const BASE_URL = 'https://oaq.notf.in/api';
-const API_KEY = 'oaq_live_sot6nzxok_mnzvbp21';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://oaq.notf.in/api';
+const API_KEY = import.meta.env.VITE_API_KEY || '';
 const RATE_LIMIT = 100; // requests per minute
 
 const defaultHeaders = {
