@@ -1,8 +1,9 @@
 {
   "name": "Vayu Mitra",
   "short_name": "VayuMitra",
-  "description": "Mobile-friendly React app with Firebase",
+  "description": "Vayu Mitra - Air Quality & Environment App",
   "start_url": "/",
+  "id": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#3b82f6",

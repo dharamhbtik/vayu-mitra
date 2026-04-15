@@ -4,6 +4,8 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   GoogleAuthProvider,
   signOut,
   updateProfile
@@ -26,6 +28,18 @@ export function AuthProvider({ children }) {
   const [error, setError] = useState(null);
 
   useEffect(() => {
+    // Handle redirect result for custom domain OAuth
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          setUser(result.user);
+        }
+      })
+      .catch((error) => {
+        console.error('Redirect result error:', error);
+        setError(getAuthErrorMessage(error.code));
+      });
+    
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
@@ -69,12 +83,39 @@ export function AuthProvider({ children }) {
     try {
       clearError();
       const provider = new GoogleAuthProvider();
+      
+      // Add scopes for additional user info if needed
+      provider.addScope('profile');
+      provider.addScope('email');
+      
+      // Set custom parameters to force account selection
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
+      
       const result = await signInWithPopup(auth, provider);
       return { success: true, user: result.user };
     } catch (err) {
+      console.error('Google sign-in error:', err.code, err.message);
       const message = getAuthErrorMessage(err.code);
       setError(message);
-      return { success: false, error: message };
+      return { success: false, error: message, code: err.code };
+    }
+  };
+  
+  const signInWithRedirect = async () => {
+    try {
+      clearError();
+      const provider = new GoogleAuthProvider();
+      provider.addScope('profile');
+      provider.addScope('email');
+      await signInWithRedirect(auth, provider);
+      return { success: true };
+    } catch (err) {
+      console.error('Redirect sign-in error:', err.code, err.message);
+      const message = getAuthErrorMessage(err.code);
+      setError(message);
+      return { success: false, error: message, code: err.code };
     }
   };
 
@@ -97,6 +138,7 @@ export function AuthProvider({ children }) {
     signInWithEmail,
     signUpWithEmail,
     signInWithGoogle,
+    signInWithRedirect,
     logout,
     isAuthenticated: !!user,
   };
@@ -123,9 +165,10 @@ function getAuthErrorMessage(code) {
     'auth/network-request-failed': 'Network error. Please check your connection',
     'auth/too-many-requests': 'Too many failed attempts. Please try again later',
     'auth/requires-recent-login': 'Please sign in again to complete this action',
+    'auth/unauthorized-domain': 'This domain is not authorized for OAuth. Please add it to Firebase Console → Authentication → Settings → Authorized domains',
   };
   
-  return errors[code] || 'An error occurred. Please try again.';
+  return errors[code] || `An error occurred (${code}). Please try again.`;
 }
 
 export default AuthContext;

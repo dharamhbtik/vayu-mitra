@@ -12,7 +12,7 @@ function Login() {
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
   
-  const { signInWithEmail, signInWithGoogle, error: authError, clearError } = useAuth();
+  const { signInWithEmail, signInWithGoogle, signInWithRedirect, error: authError, clearError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   
@@ -69,7 +69,17 @@ function Login() {
     
     if (result.success) {
       navigate(from, { replace: true });
+    } else if (result.code === 'auth/unauthorized-domain' || result.code === 'auth/popup-blocked') {
+      // Fallback to redirect sign-in for custom domains
+      console.log('Falling back to redirect sign-in...');
+      await signInWithRedirect();
     }
+  };
+  
+  const handleGoogleRedirect = async () => {
+    setIsLoading(true);
+    await signInWithRedirect();
+    // Page will redirect, no need to set loading false
   };
 
   return (
@@ -112,8 +122,19 @@ function Login() {
 
           {/* Auth Error */}
           {authError && (
-            <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-              <p className="text-sm text-red-600 dark:text-red-400">{authError}</p>
+            <div className={`mb-4 p-3 border rounded-lg ${authError.includes('not authorized') ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
+              <p className={`text-sm ${authError.includes('not authorized') ? 'text-yellow-700 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'}`}>
+                {authError}
+              </p>
+              {authError.includes('not authorized') && (
+                <button
+                  onClick={handleGoogleRedirect}
+                  disabled={isLoading}
+                  className="mt-2 text-sm font-medium text-yellow-700 dark:text-yellow-400 hover:underline"
+                >
+                  Try alternative sign-in method →
+                </button>
+              )}
             </div>
           )}
 
