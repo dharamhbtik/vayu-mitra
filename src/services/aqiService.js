@@ -9,22 +9,38 @@ const BROKER_URL = 'https://us-central1-oaqdms.cloudfunctions.net/brokerData';
 const DATA_URL = 'https://oaq.notf.in';
 
 let sessionSignature = null;
+let lastProvider = null;
 
 /**
  * Establish session with API broker
- * @returns {Promise<boolean>}
+ * @returns {Promise<Object|null>}
  */
 export async function establishSession() {
   try {
-    const response = await fetch(`${BROKER_URL}?action=api_session&token=${API_KEY}`);
-    if (!response.ok) throw new Error('Failed to establish session');
+    console.log('Establishing session with API...');
+    const url = `${BROKER_URL}?action=api_session&token=${API_KEY}`;
+    console.log('Session URL:', url);
+    
+    const response = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Session failed: ${response.status} ${response.statusText}`);
+    }
     
     const data = await response.json();
+    console.log('Session established:', data);
     sessionSignature = data;
-    return true;
+    return data;
   } catch (error) {
     console.error('Session error:', error);
-    return false;
+    sessionSignature = null;
+    return null;
   }
 }
 
@@ -34,10 +50,15 @@ export async function establishSession() {
  * @returns {string}
  */
 function getSignedUrl(path) {
-  if (!sessionSignature) return `${DATA_URL}/v1/${path}`;
+  if (!sessionSignature || !sessionSignature.Signature) {
+    console.warn('No session signature, trying without auth...');
+    return `${DATA_URL}/v1/${path}`;
+  }
   
   const { Signature, Expires, KeyName } = sessionSignature;
-  return `${DATA_URL}/v1/${path}?Signature=${Signature}&Expires=${Expires}&KeyName=${KeyName}`;
+  const url = `${DATA_URL}/v1/${path}?Signature=${encodeURIComponent(Signature)}&Expires=${Expires}&KeyName=${encodeURIComponent(KeyName)}`;
+  console.log('Signed URL:', url.substring(0, 100) + '...');
+  return url;
 }
 
 /**
@@ -45,20 +66,42 @@ function getSignedUrl(path) {
  * @param {string} path - API path
  * @returns {Promise<Object>}
  */
-async function fetchData(path) {
+async function fetchData(path, retry = true) {
   // Ensure session exists
   if (!sessionSignature) {
     await establishSession();
   }
   
   const url = getSignedUrl(path);
-  const response = await fetch(url);
+  console.log('Fetching:', url.substring(0, 80) + '...');
   
-  if (!response.ok) {
-    throw new Error(`API error: ${response.status}`);
+  try {
+    const response = await fetch(url, {
+      method: 'GET',
+      mode: 'cors',
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+    
+    if (!response.ok) {
+      if (response.status === 403 && retry) {
+        // Session might have expired, try to re-establish
+        console.log('Got 403, retrying with new session...');
+        sessionSignature = null;
+        await establishSession();
+        return fetchData(path, false);
+      }
+      throw new Error(`API error: ${response.status} ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    console.log('API response received, stations count:', Object.keys(data?.data || {}).length);
+    return data;
+  } catch (error) {
+    console.error('Fetch error:', error);
+    throw error;
   }
-  
-  return response.json();
 }
 
 /**
@@ -85,21 +128,47 @@ export async function getCityLatest(provider = 'openaq', city = 'delhi') {
  * @param {string} provider - Provider ID
  * @returns {Promise<Object>}
  */
-export async function getAllStationsLatest(provider = 'openaq') {
+export async function getAllStationsLatest(provider = 'cpcb') {
+  // Reset session when provider changes
+  if (lastProvider !== provider) {
+    sessionSignature = null;
+    lastProvider = provider;
+  }
+  
   try {
-    return await fetchData(`provider=${provider}/live/global/all_stations_latest.json`);
+    console.log(`Fetching real data for provider: ${provider}`);
+    const data = await fetchData(`provider=${provider}/live/global/all_stations_latest.json`);
+    
+    // Validate that we got real data
+    if (!data || typeof data !== 'object') {
+      throw new Error('Invalid API response format');
+    }
+    
+    // Check if data is empty or has the expected structure
+    const stations = data.data || data;
+    const stationCount = Object.keys(stations).length;
+    console.log(`Successfully loaded ${stationCount} stations from ${provider}`);
+    
+    if (stationCount === 0) {
+      throw new Error('No stations returned from API');
+    }
+    
+    return { data: stations };
   } catch (error) {
-    console.warn('API failed, using mock data:', error);
-    // Return mock data for demo purposes
-    return getMockStationsData();
+    console.error(`API failed for ${provider}:`, error);
+    console.warn('Falling back to mock data');
+    return getMockStationsData(provider);
   }
 }
 
 /**
  * Mock data for demonstration when API is unavailable
+ * @param {string} provider - Provider ID
  * @returns {Object}
  */
-function getMockStationsData() {
+function getMockStationsData(provider = 'cpcb') {
+  console.log(`Generating mock data for provider: ${provider}`);
+  
   const cities = [
     { name: 'New Delhi', country: 'India', lat: 28.6139, lon: 77.2090, baseAQI: 180 },
     { name: 'Mumbai', country: 'India', lat: 19.0760, lon: 72.8777, baseAQI: 120 },
@@ -123,7 +192,7 @@ function getMockStationsData() {
 
   cities.forEach((city, index) => {
     const id = `station_${index}`;
-    const variation = Math.random() * 40 - 20; // ±20 variation
+    const variation = Math.random() * 40 - 20;
     const pm25 = Math.max(5, city.baseAQI * 0.6 + variation);
     const pm10 = Math.max(10, city.baseAQI * 1.2 + variation * 1.5);
     
@@ -134,7 +203,7 @@ function getMockStationsData() {
       country: city.country,
       lat: city.lat + (Math.random() - 0.5) * 0.1,
       lon: city.lon + (Math.random() - 0.5) * 0.1,
-      provider: 'openaq',
+      provider: provider,
       last_updated: now,
       readings: {
         pm25: Math.round(pm25 * 10) / 10,
@@ -338,6 +407,24 @@ export function getAQIInfo(aqi) {
   };
 }
 
+/**
+ * Search stations by city or name
+ * @param {Array} stations - Array of station objects
+ * @param {string} query - Search query
+ * @returns {Array} Filtered stations
+ */
+export function searchStations(stations, query) {
+  if (!query || query.trim() === '') return stations;
+  
+  const lowerQuery = query.toLowerCase().trim();
+  return stations.filter(station => {
+    const nameMatch = station.name?.toLowerCase().includes(lowerQuery);
+    const cityMatch = station.city?.toLowerCase().includes(lowerQuery);
+    const countryMatch = station.country?.toLowerCase().includes(lowerQuery);
+    return nameMatch || cityMatch || countryMatch;
+  });
+}
+
 export default {
   establishSession,
   getProviderHierarchy,
@@ -347,5 +434,6 @@ export default {
   getDailyHistory,
   getMonthlyAggregates,
   calculateAQI,
-  getAQIInfo
+  getAQIInfo,
+  searchStations
 };

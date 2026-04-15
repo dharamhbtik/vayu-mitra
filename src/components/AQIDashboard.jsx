@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import { MapPin, Wind, Droplets, Thermometer, AlertCircle, RefreshCw, Info, Filter, Map as MapIcon, List, Search } from 'lucide-react';
-import { getAllStationsLatest, getAQIInfo, calculateAQI } from '../services/aqiService';
+import { getAllStationsLatest, getAQIInfo, calculateAQI, searchStations } from '../services/aqiService';
 import AQIMap from './AQIMap';
 
 const PROVIDERS = [
@@ -27,6 +27,7 @@ function AQIDashboard() {
   const [provider, setProvider] = useState('cpcb');
   const [pmFilter, setPmFilter] = useState('all');
   const [viewMode, setViewMode] = useState('list');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchData = async (selectedProvider = provider) => {
     try {
@@ -86,17 +87,30 @@ function AQIDashboard() {
     fetchData(provider);
   }, [provider]);
 
+  // Filter stations based on PM level and search query
   const filteredStations = useMemo(() => {
-    if (pmFilter === 'all') return stations;
-    const filter = PM_FILTERS.find(f => f.value === pmFilter);
-    if (!filter) return stations;
-    return stations.filter(station => {
-      const pm25 = station.readings?.pm25 || 0;
-      if (filter.max && pm25 > filter.max) return false;
-      if (filter.min && pm25 < filter.min) return false;
-      return true;
-    });
-  }, [stations, pmFilter]);
+    let result = stations;
+    
+    // Apply search filter
+    if (searchQuery.trim()) {
+      result = searchStations(result, searchQuery);
+    }
+    
+    // Apply PM filter
+    if (pmFilter !== 'all') {
+      const filter = PM_FILTERS.find(f => f.value === pmFilter);
+      if (filter) {
+        result = result.filter(station => {
+          const pm25 = station.readings?.pm25 || 0;
+          if (filter.max && pm25 > filter.max) return false;
+          if (filter.min && pm25 < filter.min) return false;
+          return true;
+        });
+      }
+    }
+    
+    return result;
+  }, [stations, pmFilter, searchQuery]);
 
   const stats = {
     total: filteredStations.length,
@@ -225,8 +239,18 @@ function AQIDashboard() {
                     <input
                       type="text"
                       placeholder="Search for a city or place..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
                       className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 shadow-sm"
                     />
+                    {searchQuery && (
+                      <button
+                        onClick={() => setSearchQuery('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                   <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600">
                     <span>PM2.5 Levels</span>
