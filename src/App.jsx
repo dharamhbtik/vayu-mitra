@@ -2,15 +2,12 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AuthProvider } from './context/AuthContext'
 import ProtectedRoute from './components/ProtectedRoute'
 import AppShell from './components/AppShell'
-import Home from './pages/Home'
-import Dashboard from './pages/Dashboard'
-import Documents from './pages/Documents'
 import Profile from './pages/Profile'
 import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import NotFound from './pages/NotFound'
-import AQIMap from './components/AQIMap'
+import AQIDashboard from './components/AQIDashboard'
 import AQITrends from './components/AQITrends'
 
 function App() {
@@ -28,11 +25,8 @@ function App() {
               <AppShell />
             </ProtectedRoute>
           }>
-            <Route index element={<AQIMap />} />
-            <Route path="map" element={<AQIMap />} />
+            <Route index element={<AQIDashboard />} />
             <Route path="trends" element={<AQITrends />} />
-            <Route path="dashboard" element={<Dashboard />} />
-            <Route path="documents" element={<Documents />} />
             <Route path="profile" element={<Profile />} />
             <Route path="settings" element={<Settings />} />
           </Route>

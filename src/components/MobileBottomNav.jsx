@@ -1,11 +1,11 @@
 import { NavLink } from 'react-router-dom';
-import { Map, TrendingUp, BarChart3, Settings } from 'lucide-react';
+import { Home, TrendingUp, User, Settings } from 'lucide-react';
 
 const navItems = [
-  { to: '/', icon: Map, label: 'Map' },
+  { to: '/', icon: Home, label: 'Home' },
   { to: '/trends', icon: TrendingUp, label: 'Trends' },
-  { to: '/dashboard', icon: BarChart3, label: 'Stats' },
-  { to: '/settings', icon: Settings, label: 'More' },
+  { to: '/profile', icon: User, label: 'Profile' },
+  { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
 function MobileBottomNav() {

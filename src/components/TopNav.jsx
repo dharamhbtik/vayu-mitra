@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Menu, X, Bell, User, LogOut } from 'lucide-react';
+import { Bell, User, LogOut } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-function TopNav({ onMenuClick, isSidebarOpen }) {
+function TopNav() {
   const [showProfile, setShowProfile] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -21,40 +21,17 @@ function TopNav({ onMenuClick, isSidebarOpen }) {
   const userName = user?.displayName || user?.email?.split('@')[0] || 'User';
 
   return (
-    <header className="sticky top-0 z-40 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+    <header className="sticky top-0 z-40 bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
       <div className="flex items-center justify-between h-14 px-4 max-w-7xl mx-auto">
-        {/* Left: Hamburger + Logo */}
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onMenuClick}
-            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 lg:hidden transition-colors"
-            aria-label="Toggle menu"
-          >
-            {isSidebarOpen ? (
-              <X className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-            ) : (
-              <Menu className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-            )}
-          </button>
-          
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">V</span>
-            </div>
-            <span className="font-semibold text-gray-900 dark:text-white hidden sm:block">
-              Vayu Mitra
-            </span>
-          </Link>
-        </div>
-
-        {/* Center: Search (hidden on small mobile) */}
-        <div className="hidden sm:flex flex-1 max-w-md mx-4">
-          <input
-            type="text"
-            placeholder="Search..."
-            className="w-full px-4 py-2 bg-gray-100 dark:bg-gray-800 border-0 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-white"
-          />
-        </div>
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center">
+            <span className="text-white font-bold text-sm">V</span>
+          </div>
+          <span className="font-semibold text-slate-900 dark:text-white hidden sm:block">
+            Vayu Mitra
+          </span>
+        </Link>
 
         {/* Right: Actions */}
         <div className="flex items-center gap-2">
