@@ -1,6 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
-import { MapPin, Wind, Droplets, Thermometer, AlertCircle, RefreshCw, Info, Filter, Map as MapIcon, List } from 'lucide-react';
+import { MapPin, Wind, Droplets, Thermometer, AlertCircle, RefreshCw, Info, Filter, Map as MapIcon, List, Search } from 'lucide-react';
 import { getAllStationsLatest, getAQIInfo, calculateAQI } from '../services/aqiService';
+import AQIMap from './AQIMap';
 
 const PROVIDERS = [
   { value: 'openaq', label: 'OpenAQ' },
@@ -216,7 +217,58 @@ function AQIDashboard() {
             </div>
 
             {viewMode === 'map' ? (
-              <AQIMapView stations={filteredStations} selectedStation={selectedStation} onSelectStation={setSelectedStation} />
+              <div className="space-y-4">
+                {/* Search Bar for Map */}
+                <div className="flex items-center gap-4">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Search for a city or place..."
+                      className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 shadow-sm"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600">
+                    <span>PM2.5 Levels</span>
+                  </div>
+                </div>
+                
+                {/* Map Component */}
+                <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden" style={{ height: '600px' }}>
+                  <AQIMap 
+                    stations={filteredStations} 
+                    selectedStation={selectedStation}
+                    onSelectStation={setSelectedStation}
+                  />
+                </div>
+                
+                {/* PM2.5 Legend */}
+                <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-300">PM2.5 Levels</span>
+                    <span className="text-xs text-slate-500">μg/m³</span>
+                  </div>
+                  <div className="mt-3 flex items-center gap-2">
+                    {[
+                      { color: '#22c55e', label: 'Good', range: '0-35' },
+                      { color: '#eab308', label: 'Satisfactory', range: '36-75' },
+                      { color: '#f97316', label: 'Moderate', range: '76-100' },
+                      { color: '#ef4444', label: 'Poor', range: '101-150' },
+                      { color: '#a855f7', label: 'Very Poor', range: '151-200' },
+                      { color: '#7f1d1d', label: 'Severe', range: '200+' },
+                    ].map((item) => (
+                      <div key={item.label} className="flex flex-col items-center gap-1 flex-1">
+                        <div 
+                          className="w-full h-3 rounded-full" 
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-xs text-slate-600 dark:text-slate-400 text-center">{item.label}</span>
+                        <span className="text-[10px] text-slate-400">{item.range}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
             ) : (
               <div className="grid lg:grid-cols-3 gap-6">
                 <div className="lg:col-span-1 space-y-6">
@@ -393,43 +445,6 @@ function findNearestStation(userLoc, stations) {
     }
     return nearest;
   }, null);
-}
-
-// Placeholder Map Component
-function AQIMapView({ stations, selectedStation, onSelectStation }) {
-  return (
-    <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 p-8 text-center">
-      <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
-        <MapIcon className="w-8 h-8 text-slate-400" />
-      </div>
-      <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">Map View</h3>
-      <p className="text-slate-500 dark:text-slate-400 mb-4">
-        Showing {stations.length} stations on map
-      </p>
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-2xl mx-auto">
-        {stations.slice(0, 8).map((station) => {
-          const info = getAQIInfo(station.aqi);
-          return (
-            <button
-              key={station.id}
-              onClick={() => onSelectStation(station)}
-              className={`p-3 rounded-lg border-2 transition-all ${
-                selectedStation?.id === station.id
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-slate-200 dark:border-slate-700 hover:border-slate-300'
-              }`}
-            >
-              <div className="text-lg font-bold" style={{ color: info.color }}>{station.aqi}</div>
-              <div className="text-xs text-slate-600 dark:text-slate-400 truncate">{station.city}</div>
-            </button>
-          );
-        })}
-      </div>
-      {stations.length > 8 && (
-        <p className="text-sm text-slate-400 mt-4">+ {stations.length - 8} more stations</p>
-      )}
-    </div>
-  );
 }
 
 export default AQIDashboard;
