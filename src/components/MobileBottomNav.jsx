@@ -25,8 +25,12 @@ function MobileBottomNav() {
             `}
             end={to === '/'}
           >
-            <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
-            <span className="text-[10px] font-medium mt-0.5">{label}</span>
+            {({ isActive }) => (
+              <>
+                <Icon className="w-6 h-6" strokeWidth={isActive ? 2.5 : 2} />
+                <span className="text-[10px] font-medium mt-0.5">{label}</span>
+              </>
+            )}
           </NavLink>
         ))}
       </div>
