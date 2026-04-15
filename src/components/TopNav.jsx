@@ -38,11 +38,11 @@ function TopNav({ onMenuClick, isSidebarOpen }) {
           </button>
           
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">A</span>
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-cyan-400 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">V</span>
             </div>
             <span className="font-semibold text-gray-900 dark:text-white hidden sm:block">
-              AppName
+              Vayu Mitra
             </span>
           </Link>
         </div>

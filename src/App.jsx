@@ -10,6 +10,8 @@ import Settings from './pages/Settings'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import NotFound from './pages/NotFound'
+import AQIMap from './components/AQIMap'
+import AQITrends from './components/AQITrends'
 
 function App() {
   return (
@@ -26,7 +28,9 @@ function App() {
               <AppShell />
             </ProtectedRoute>
           }>
-            <Route index element={<Home />} />
+            <Route index element={<AQIMap />} />
+            <Route path="map" element={<AQIMap />} />
+            <Route path="trends" element={<AQITrends />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="documents" element={<Documents />} />
             <Route path="profile" element={<Profile />} />

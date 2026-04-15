@@ -1,10 +1,10 @@
 import { NavLink } from 'react-router-dom';
-import { Home, LayoutDashboard, FileText, Settings } from 'lucide-react';
+import { Map, TrendingUp, BarChart3, Settings } from 'lucide-react';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Home' },
-  { to: '/dashboard', icon: LayoutDashboard, label: 'Dash' },
-  { to: '/documents', icon: FileText, label: 'Docs' },
+  { to: '/', icon: Map, label: 'Map' },
+  { to: '/trends', icon: TrendingUp, label: 'Trends' },
+  { to: '/dashboard', icon: BarChart3, label: 'Stats' },
   { to: '/settings', icon: Settings, label: 'More' },
 ];
 

@@ -1,8 +1,8 @@
 import { NavLink } from 'react-router-dom';
 import { 
-  Home, 
+  Map, 
+  TrendingUp, 
   LayoutDashboard, 
-  FileText, 
   Settings, 
   Users, 
   BarChart3,
@@ -12,11 +12,10 @@ import {
 } from 'lucide-react';
 
 const navItems = [
-  { to: '/', icon: Home, label: 'Home', exact: true },
+  { to: '/', icon: Map, label: 'AQI Map', exact: true },
+  { to: '/trends', icon: TrendingUp, label: 'Trends' },
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/documents', icon: FileText, label: 'Documents' },
-  { to: '/analytics', icon: BarChart3, label: 'Analytics' },
-  { to: '/team', icon: Users, label: 'Team' },
+  { to: '/profile', icon: Users, label: 'Profile' },
   { to: '/settings', icon: Settings, label: 'Settings' },
 ];
 
