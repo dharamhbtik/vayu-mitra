@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
-import { MapPin, Wind, Droplets, Thermometer, AlertCircle, RefreshCw, Navigation } from 'lucide-react';
+import { MapPin, Wind, Droplets, Thermometer, AlertCircle, RefreshCw, Info } from 'lucide-react';
 import { getAllStationsLatest, getAQIInfo, calculateAQI } from '../services/aqiService';
 
 function AQIDashboard() {
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isDemo, setIsDemo] = useState(false);
   const [selectedStation, setSelectedStation] = useState(null);
   const [userLocation, setUserLocation] = useState(null);
 
@@ -13,12 +14,17 @@ function AQIDashboard() {
     try {
       setLoading(true);
       setError(null);
+      setIsDemo(false);
       
       const response = await getAllStationsLatest('openaq');
       
       if (!response?.data) {
         throw new Error('Unable to load air quality data');
       }
+      
+      // Check if this is mock data (demo mode)
+      const isMockData = Object.keys(response.data).some(id => id.startsWith('station_'));
+      setIsDemo(isMockData);
       
       const stationsData = Object.entries(response.data).map(([id, station]) => ({
         id,
@@ -102,6 +108,16 @@ function AQIDashboard() {
       </header>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Demo Mode Banner */}
+        {isDemo && (
+          <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center gap-3">
+            <Info className="w-5 h-5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
+            <p className="text-amber-700 dark:text-amber-300">
+              <strong>Demo Mode:</strong> Showing simulated air quality data. Live API temporarily unavailable.
+            </p>
+          </div>
+        )}
+
         {/* Error State */}
         {error && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-center gap-3">
