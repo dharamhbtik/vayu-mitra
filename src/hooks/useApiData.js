@@ -1,28 +1,31 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { get } from '../services/apiService';
+import { fetchWithCache } from '../services/cacheService';
 
 /**
- * Custom hook for fetching data from API endpoints
+ * Custom hook for fetching data from API endpoints with Firestore caching
  * @param {string} endpoint - API endpoint path (e.g., '/users', '/items/123')
  * @param {Object} params - Optional query parameters
  * @param {boolean} immediate - Whether to fetch immediately on mount (default: true)
- * @returns {Object} { data, loading, error, refetch, setData }
+ * @param {boolean} useCache - Whether to use Firestore caching (default: true)
+ * @returns {Object} { data, loading, error, fromCache, refetch, setData }
  * @example
- * const { data, loading, error, refetch } = useApiData('/users', { page: 1 });
+ * const { data, loading, error, fromCache, refetch } = useApiData('/users', { page: 1 });
  */
-export function useApiData(endpoint, params = {}, immediate = true) {
+export function useApiData(endpoint, params = {}, immediate = true, useCache = true) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(immediate);
   const [error, setError] = useState(null);
+  const [fromCache, setFromCache] = useState(false);
   
   // Use ref to track mounted state for cleanup
   const isMounted = useRef(true);
   const abortControllerRef = useRef(null);
 
   /**
-   * Fetch data from the API endpoint
+   * Fetch data with caching support
    */
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (skipCache = false) => {
     // Cancel any pending request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
@@ -33,18 +36,33 @@ export function useApiData(endpoint, params = {}, immediate = true) {
     
     setLoading(true);
     setError(null);
+    setFromCache(false);
 
     try {
-      const response = await get(endpoint, params);
+      let result;
+
+      // Use cache if enabled and not forcing refresh
+      if (useCache && !skipCache) {
+        result = await fetchWithCache(endpoint, params, get);
+      } else {
+        // Direct API call
+        const response = await get(endpoint, params);
+        result = {
+          data: response.success ? response.data : null,
+          fromCache: false,
+          error: response.success ? null : response.error,
+        };
+      }
       
       // Only update state if component is still mounted
       if (isMounted.current) {
-        if (response.success) {
-          setData(response.data);
-          setError(null);
-        } else {
-          setError(response.error || 'Failed to fetch data');
+        if (result.error) {
+          setError(result.error);
           setData(null);
+        } else {
+          setData(result.data);
+          setFromCache(result.fromCache);
+          setError(null);
         }
       }
     } catch (err) {
@@ -58,13 +76,14 @@ export function useApiData(endpoint, params = {}, immediate = true) {
         setLoading(false);
       }
     }
-  }, [endpoint, JSON.stringify(params)]);
+  }, [endpoint, JSON.stringify(params), useCache]);
 
   /**
-   * Manual refetch function
+   * Manual refetch function - forces fresh data from API
    */
   const refetch = useCallback(() => {
-    return fetchData();
+    setFromCache(false);
+    return fetchData(true); // skipCache = true
   }, [fetchData]);
 
   // Fetch on mount if immediate is true
@@ -86,6 +105,7 @@ export function useApiData(endpoint, params = {}, immediate = true) {
     data,
     loading,
     error,
+    fromCache,
     refetch,
     setData, // Allow manual data updates
   };
