@@ -73,13 +73,31 @@ function AQIDashboard() {
     }
   };
 
+  // Default location: New Delhi, India
+  const DEFAULT_LOCATION = { lat: 28.6139, lon: 77.2090, city: 'New Delhi' };
+
   useEffect(() => {
     fetchData();
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        (pos) => setUserLocation({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-        () => console.log('Location access denied')
+        (pos) => {
+          const loc = { lat: pos.coords.latitude, lon: pos.coords.longitude };
+          // Check if location is within India bounds (roughly)
+          const isInIndia = loc.lat >= 8 && loc.lat <= 37 && loc.lon >= 68 && loc.lon <= 97;
+          if (isInIndia) {
+            setUserLocation(loc);
+          } else {
+            console.log('Location outside India, using New Delhi');
+            setUserLocation(DEFAULT_LOCATION);
+          }
+        },
+        () => {
+          console.log('Location access denied, using New Delhi');
+          setUserLocation(DEFAULT_LOCATION);
+        }
       );
+    } else {
+      setUserLocation(DEFAULT_LOCATION);
     }
   }, []);
 
@@ -136,30 +154,7 @@ function AQIDashboard() {
               </p>
             </div>
             
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400" />
-                <select
-                  value={provider}
-                  onChange={(e) => setProvider(e.target.value)}
-                  className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-                >
-                  {PROVIDERS.map(p => (
-                    <option key={p.value} value={p.value}>{p.label}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <select
-                value={pmFilter}
-                onChange={(e) => setPmFilter(e.target.value)}
-                className="px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500"
-              >
-                {PM_FILTERS.map(f => (
-                  <option key={f.value} value={f.value}>{f.label}</option>
-                ))}
-              </select>
-              
+            <div className="flex items-center gap-3">
               <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
                 <button
                   onClick={() => setViewMode('list')}
@@ -168,6 +163,7 @@ function AQIDashboard() {
                       ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' 
                       : 'text-slate-500 dark:text-slate-400'
                   }`}
+                  title="List View"
                 >
                   <List className="w-4 h-4" />
                 </button>
@@ -178,19 +174,11 @@ function AQIDashboard() {
                       ? 'bg-white dark:bg-slate-600 text-blue-600 shadow-sm' 
                       : 'text-slate-500 dark:text-slate-400'
                   }`}
+                  title="Map View"
                 >
                   <MapIcon className="w-4 h-4" />
                 </button>
               </div>
-              
-              <button
-                onClick={() => fetchData(provider)}
-                disabled={loading}
-                className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 transition-colors"
-              >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
             </div>
           </div>
         </div>
@@ -221,7 +209,7 @@ function AQIDashboard() {
           </div>
         )}
 
-        {filteredStations.length > 0 && (
+        {!loading && (
           <>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
               <StatCard label="Average AQI" value={stats.avgAQI} color={getAQIColor(stats.avgAQI)} subtext={getAQIInfo(stats.avgAQI).description} />
@@ -230,33 +218,58 @@ function AQIDashboard() {
               <StatCard label="Unhealthy" value={stats.unhealthy} color="red" subtext={`${Math.round(stats.unhealthy/stats.total*100) || 0}%`} />
             </div>
 
+            {/* Search and Filter Bar - Always visible */}
+            <div className="flex flex-wrap items-center gap-3 mb-6">
+              <div className="relative flex-1 min-w-[200px] max-w-md">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search city or station..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-8 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 shadow-sm text-sm"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+              
+              <select
+                value={pmFilter}
+                onChange={(e) => setPmFilter(e.target.value)}
+                className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+              >
+                {PM_FILTERS.map(f => (
+                  <option key={f.value} value={f.value}>{f.label}</option>
+                ))}
+              </select>
+              
+              <select
+                value={provider}
+                onChange={(e) => setProvider(e.target.value)}
+                className="px-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm focus:ring-2 focus:ring-blue-500"
+              >
+                {PROVIDERS.map(p => (
+                  <option key={p.value} value={p.value}>{p.label}</option>
+                ))}
+              </select>
+              
+              <button
+                onClick={() => fetchData()}
+                className="p-2.5 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl border border-slate-300 dark:border-slate-600"
+                title="Refresh data"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+            </div>
+
             {viewMode === 'map' ? (
               <div className="space-y-4">
-                {/* Search Bar for Map */}
-                <div className="flex items-center gap-4">
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                    <input
-                      type="text"
-                      placeholder="Search for a city or place..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-10 pr-4 py-3 border border-slate-300 dark:border-slate-600 rounded-xl bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500 shadow-sm"
-                    />
-                    {searchQuery && (
-                      <button
-                        onClick={() => setSearchQuery('')}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400 bg-white dark:bg-slate-800 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600">
-                    <span>PM2.5 Levels</span>
-                  </div>
-                </div>
-                
                 {/* Map Component */}
                 <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden" style={{ height: '600px' }}>
                   <AQIMap 
@@ -392,6 +405,25 @@ function AQIDashboard() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+            
+            {/* No results message */}
+            {filteredStations.length === 0 && stations.length > 0 && (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">No stations found</h3>
+                <p className="text-slate-500 dark:text-slate-400">
+                  Try adjusting your search or filters to see more results.
+                </p>
+                <button
+                  onClick={() => { setSearchQuery(''); setPmFilter('all'); }}
+                  className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Clear Filters
+                </button>
               </div>
             )}
           </>
