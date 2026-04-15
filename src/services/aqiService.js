@@ -50,15 +50,28 @@ export async function establishSession() {
  * @returns {string}
  */
 function getSignedUrl(path) {
-  if (!sessionSignature || !sessionSignature.Signature) {
-    console.warn('No session signature, trying without auth...');
+  // Check if we have a valid session signature
+  if (!sessionSignature) {
+    console.warn('No session signature available');
     return `${DATA_URL}/v1/${path}`;
   }
   
-  const { Signature, Expires, KeyName } = sessionSignature;
-  const url = `${DATA_URL}/v1/${path}?Signature=${encodeURIComponent(Signature)}&Expires=${Expires}&KeyName=${encodeURIComponent(KeyName)}`;
-  console.log('Signed URL:', url.substring(0, 100) + '...');
-  return url;
+  // The API returns the signature as a query string format
+  // Example: "URLPrefix=...&Expires=...&KeyName=...&Signature=..."
+  if (sessionSignature.signature) {
+    const signedUrl = `${DATA_URL}/v1/${path}?${sessionSignature.signature}`;
+    console.log('Signed URL (using signature):', signedUrl.substring(0, 120) + '...');
+    return signedUrl;
+  }
+  
+  // Fallback: if signature is in a different format, try to construct it
+  if (typeof sessionSignature === 'string') {
+    const signedUrl = `${DATA_URL}/v1/${path}?${sessionSignature}`;
+    return signedUrl;
+  }
+  
+  console.warn('Invalid signature format:', sessionSignature);
+  return `${DATA_URL}/v1/${path}`;
 }
 
 /**
